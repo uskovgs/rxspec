@@ -1,0 +1,12 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+.DS_Store
+rxspec.Rproj
+ToDo.md
+inst/doc
+_pycache__/
+*.pyc
+README.html
+README.Rmd

@@ -1,0 +1,21 @@
+Package: rxspec
+Title: What the Package Does (One Line, Title Case)
+Version: 0.0.0.9000
+Authors@R: 
+    person("Grigory", "Uskov", , "uskov@cosmos.ru", role = c("aut", "cre"),
+           comment = c(ORCID = "YOUR-ORCID-ID"))
+Description: Interface to 'PyXspec' from R.
+License: MIT + file LICENSE
+Imports:
+    reticulate,
+    tibble,
+    dplyr,
+    purrr,
+    glue,
+    checkmate,
+    ggplot2,
+    knitr,
+    kableExtra
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.3
