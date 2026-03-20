@@ -156,3 +156,160 @@ plot_steppar.xs_steppar <- function(out_steppar, delstat = 1) {
             )
         )
 }
+
+#' @export 
+plot_data <- function(df, group_var = NULL, addcomp = FALSE, legend.position="none", palette = 'Dark2', size_model = 2, size_error=1, size_pt = 1) {
+    
+    checkmate::assert_logical(addcomp, len = 1L)  
+    
+    p0 <- df |> 
+        mutate(rate_lo = rate - rate_err, rate_up = rate + rate_err) |> 
+        ggplot(aes(energy, model, xwidth = energy_err, color = !! enquo(group_var))) +
+            xrayr::geom_xray_stepcount(aes(group = !! enquo(group_var)), size = size_model) +
+            geom_linerange(
+                aes(xmin = energy - energy_err, xmax = energy + energy_err, y = rate),
+                linewidth = size_error,
+                # color = "grey"
+            ) +
+            geom_linerange(
+                aes(ymin = pmax(0, rate_lo), ymax = rate_up, color = !! enquo(group_var)),
+                # color = "grey10",
+                linewidth = size_error,
+                width = 0
+            ) +
+            geom_point(aes(x = energy, y = pmax(0, rate), color = !! enquo(group_var)), inherit.aes = FALSE, size = size_pt) +
+            ggplot2::scale_x_log10() + 
+            ggplot2::scale_y_log10(
+                breaks = scales::trans_breaks("log10", function(x) 10^x),
+                labels = scales::trans_format("log10", scales::label_math(10^.x))
+            ) +
+            ggplot2::annotation_logticks() +
+            ggplot2::xlab('Energy, keV') +
+            ggplot2::ylab('cts/s/keV') +
+            ggplot2::scale_color_brewer(palette = palette) +
+            theme(legend.position = legend.position,
+                legend.title = ggplot2::element_blank(),
+                panel.grid = ggplot2::element_blank())
+    
+    
+    if (addcomp) {
+      n_comp <- sum(grepl("^comp", colnames(df)))
+      
+      if (n_comp > 1) {
+        p_addcomp <- purrr::map(1:n_comp, ~ xrayr::geom_xray_stepcount(
+          data = function(df) df %>% select(telescope, energy, energy_err, paste0("comp", .x)),
+          mapping = ggplot2::aes_string(y = paste0("comp", .x)),
+          alpha = 0.7,
+          inherit.aes = TRUE
+          )
+        )
+          
+      } else {
+        # cat("no additional components: ncomp =", n_comp, "\n")
+        p_addcomp <- NULL
+      }
+    } else {
+      p_addcomp <- NULL
+    }
+    p0 + 
+      p_addcomp + 
+      ggplot2::coord_cartesian(ylim = 10^(ggplot2::ggplot_build(p0)$layout$panel_params[[1]]$y.range))
+}
+
+#' @export 
+plot_ratio <- function(df, group_var = NULL, palette = "Dark2", size = 1) {
+    ggplot(df, aes(color = !! enquo(group_var))) +
+    xrayr::geom_xray_ratio(
+        aes(
+            x = energy,
+            xwidth = energy_err,
+            obs = rate,
+            obs_err = rate_err,
+            model = model
+        ),
+        size = size
+    ) +
+    ggplot2::geom_hline(yintercept = 1) +
+    ggplot2::scale_x_log10() +
+    ggplot2::annotation_logticks(sides = 'b') +
+    ggplot2::xlab('Energy, keV') +
+    ggplot2::ylab('ratio') +
+    ggplot2::scale_color_brewer(palette = palette) +
+    theme(legend.position = "none",
+          panel.grid = ggplot2::element_blank())
+    
+}
+
+#' @export 
+plot_all <- function(df, 
+                     group_var = NULL, 
+                     addcomp = FALSE, 
+                     ylim_ratio = c(NA, NA), 
+                     title_name = NULL, 
+                     subtitle = NULL,
+                     legend.position = "none",
+                     palette = "Dark2",
+                     rel_heights = c(3, 2),
+                     size = 0.5,
+                     size_model = 1, 
+                     size_error = 0.25, 
+                     size_pt = 1
+                     ) {
+    cowplot::plot_grid(
+    plot_data(df, group_var = !! enquo(group_var), 
+              addcomp = addcomp, 
+              legend.position = legend.position,
+              palette = palette, 
+              size_model = size_model, 
+              size_error = size_error, 
+            size_pt = size_pt) + 
+        theme(axis.title.x = ggplot2::element_blank(),
+             axis.text.x = ggplot2::element_blank(),
+             plot.title = ggplot2::element_text(size=15)
+             ) +
+        labs(title = title_name, subtitle = subtitle), 
+    plot_ratio(df, group_var = !! enquo(group_var), palette = palette, size = size) + 
+        ggplot2::coord_cartesian(ylim = ylim_ratio),
+    align = "v",
+    ncol = 1, 
+    rel_heights = rel_heights
+    )
+}
+
+#' @export 
+plot_model <- function(df, ylim = range(df$model), xlim = range(df$energy), palette = "Dark2", expand = FALSE) {
+  checkmate::assert_data_frame(df, min.rows = 1L, min.cols = 4L)
+  
+  n_comp <- df |> 
+    select(starts_with("comp")) |> 
+    ncol()
+  
+  comp_colnames <- if (n_comp > 0) paste0("comp", 1:n_comp) else  NULL
+  
+  model_colnames <- c("sum", comp_colnames)
+  
+  x_range <- range(df$energy)
+  
+  df |>
+    dplyr::rename(sum = model) %>% 
+    pivot_longer(cols = tidyr::all_of(model_colnames), names_to = "icomp", values_to = "val") %>% 
+    mutate(icomp = factor(icomp, levels = model_colnames)) %>% 
+    ggplot(aes(x = energy, y = val, color = icomp, linetype = icomp)) +
+    geom_path() +
+    ggplot2::scale_color_brewer(palette = palette) +
+    ggplot2::scale_x_log10() +
+    ggplot2::scale_y_log10() +
+    ggplot2::annotation_logticks() +
+    ggplot2::coord_cartesian(ylim = ylim, xlim = xlim, expand = expand) +
+    ggplot2::labs(
+      x = "Energy, keV",
+      y = latex2exp::TeX("Photons cm$^{-2}$ s$^{-1}$ keV$^{-1}$")
+    ) +
+    ggplot2::theme(
+      legend.title = element_blank(),
+      legend.position = c(0.9, 0.9),
+      legend.background = element_blank(),
+      legend.key = element_blank()
+    )
+  
+}

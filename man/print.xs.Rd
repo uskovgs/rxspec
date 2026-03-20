@@ -6,12 +6,18 @@
 \usage{
 \method{print}{xs}(
   x,
+  ...,
   files = TRUE,
   stat = TRUE,
   fit_params = TRUE,
   model = TRUE,
   chain = TRUE
 )
+}
+\arguments{
+\item{x}{An object of class "xs".}
+
+\item{...}{Unused.}
 }
 \description{
 Print an rxspec session
