@@ -179,10 +179,7 @@ plot_data <- function(df, group_var = NULL, addcomp = FALSE, legend.position="no
             ) +
             geom_point(aes(x = energy, y = pmax(0, rate), color = !! enquo(group_var)), inherit.aes = FALSE, size = size_pt) +
             ggplot2::scale_x_log10() + 
-            ggplot2::scale_y_log10(
-                breaks = scales::trans_breaks("log10", function(x) 10^x),
-                labels = scales::trans_format("log10", scales::label_math(10^.x))
-            ) +
+            scale_y_log10_decades() +
             ggplot2::annotation_logticks() +
             ggplot2::xlab('Energy, keV') +
             ggplot2::ylab('cts/s/keV') +
@@ -235,8 +232,10 @@ plot_ratio <- function(df, group_var = NULL, palette = "Dark2", size = 1) {
     ggplot2::xlab('Energy, keV') +
     ggplot2::ylab('ratio') +
     ggplot2::scale_color_brewer(palette = palette) +
-    theme(legend.position = "none",
-          panel.grid = ggplot2::element_blank())
+    ggplot2::theme(
+      legend.position = "none",
+      panel.grid = ggplot2::element_blank()
+    )
     
 }
 
@@ -312,4 +311,25 @@ plot_model <- function(df, ylim = range(df$model), xlim = range(df$energy), pale
       legend.key = element_blank()
     )
   
+}
+
+
+scale_y_log10_decades <- function() {
+  ggplot2::scale_y_log10(
+    breaks = function(lims) {
+      lims <- lims[is.finite(lims) & lims > 0]
+      if (!length(lims)) {
+        return(numeric())
+      }
+
+      emin <- floor(log10(min(lims)))
+      emax <- ceiling(log10(max(lims)))
+
+      10 ^ seq(emin, emax, by = 1)
+    },
+    labels = function(x) {
+      expo <- round(log10(x))
+      parse(text = ifelse(expo == 0, "1", paste0("10^{", expo, "}")))
+    }
+  )
 }

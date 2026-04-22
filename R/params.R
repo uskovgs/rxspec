@@ -44,7 +44,7 @@ get_fit_params_i <- function(xs, model_grp, error = FALSE, level = 90) {
   m <- xspec$AllModels(model_grp)
   q_chi <- qchisq(level / 100, df = 1) |> 
     round(3) |> 
-    as.character()
+    sprintf("%.3f", ... = _)
   
   # rewrite
   
